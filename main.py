@@ -2,6 +2,7 @@ from detectors.yolo_detector import YOLOFaceDetector
 from anonymisers.blur import BlurAnonymiser
 from anonymisers.cartoon import CartoonAnonymiser
 from pipeline.evaluate import evaluate_celeba
+from detectors.mp_mesh_detector import MediaPipeMeshDetector
 
 if __name__ == "__main__":
     detector = YOLOFaceDetector("weights/pretrained_model.pt")
