@@ -1,6 +1,6 @@
-# Face Anonymisation Evaluation Framework
+#  GDPR Facial Anonymiser
 
-This project aims to implemented an embedded solution that anonymises faces in real time, before leaving the embedded device.
+This project aims to implemented an embedded solution that anonymises faces in real time, before leaving the embedded device. Making it GDPR compliant.
 
 The framework is modular:
 
