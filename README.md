@@ -48,20 +48,22 @@ The framework is modular:
 - [ ] **T2:** Build evaluation/demo dataset
 - [ ] **T3:** Package cross-platform demonstrator (Docker/app + guide)
 
+## Project Structure
 
-##  Project Structure
-
-live\_face\_detector/
+```
+live_face_detector/
 ├── anonymisers/
 ├── detectors/
 ├── metrics/
 ├── pipeline/
-├── datasets/ 
-│ ├── celebA/
-│ │ ├── Anno/
-│ │ ├── Img/
-│ │ ├── Eval/
-│ │ └── README.txt
-│ └── celebV/
+├── datasets/
+│   ├── celebA/
+│   │   ├── Anno/
+│   │   ├── Img/
+│   │   ├── Eval/
+│   │   └── README.txt
+│   └── celebV/
 ├── requirements.txt
 └── README.md
+```
+
