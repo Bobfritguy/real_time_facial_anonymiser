@@ -1,2 +1,6 @@
+# Datasets
 datasets/celebA/
 datasets/celebV/
+
+# Python stuff
+.venv/
