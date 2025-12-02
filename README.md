@@ -63,6 +63,7 @@ live_face_detector/
 │   │   ├── Eval/
 │   │   └── README.txt
 │   └── celebV/
+├── weights/
 ├── requirements.txt
 └── README.md
 ```
