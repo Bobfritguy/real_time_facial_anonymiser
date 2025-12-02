@@ -13,6 +13,7 @@ if __name__ == "__main__":
     print("\n### BLUR recall:")
     evaluate_celeba(detector, celebA_root, limit=5000, anonymiser=BlurAnonymiser())
 
+    detector = MediaPipeMeshDetector()
     print("\n### CARTOON recall:")
     evaluate_celeba(detector, celebA_root, limit=5000, anonymiser=CartoonAnonymiser())
 
