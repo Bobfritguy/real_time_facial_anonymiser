@@ -1,5 +1,7 @@
 import os
 import cv2
+import time
+import json
 from detectors.yolo_detector import YOLOFaceDetector
 from metrics.detection import DetectionRecallMetric
 from datasets.celebA_loader import load_celeba_bboxes
@@ -24,7 +26,7 @@ def evaluate_video(detector, anonymiser, metrics, video_path):
     return metrics.finalise()
 
 
-def evaluate_celeba(detector, celebA_root, limit=None):
+def evaluate_celeba(detector, celebA_root, limit=None, save=False):
     # Load GT annotations
     bbox_dict = load_celeba_bboxes(celebA_root)
 
