@@ -45,3 +45,18 @@ class DetectionRecallMetric:
         # pred_boxes: same format, from anonymised video
         # Matches each GT box to the best IoU prediction.
 ```
+
+
+## Usage
+
+```
+metric = DetectionRecallMetric(iou_thresh=0.5)
+
+for clear_frame, anon_frame in dataset:
+    gt_boxes = clear_detector(clear_frame)
+    pred_boxes = anon_detector(anon_frame)
+    metric.update(gt_boxes, pred_boxes)
+
+recall = metric.finalise()
+print("Detection recall:", recall)
+```
