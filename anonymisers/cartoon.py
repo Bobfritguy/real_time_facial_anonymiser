@@ -2,13 +2,48 @@ import cv2
 from .base_anon import BaseAnonymiser
 
 class CartoonAnonymiser(BaseAnonymiser):
-    def apply(self, frame, faces):
-        out = frame.copy()
-        for f in faces:
-            if f["landmarks"] is not None:
-                draw_face_landmarks_filled(out, f["landmarks"])
-        return out
+def apply(self, frame, faces):
+    """
+    Apply cartoon anonymisation ONLY when full MediaPipe
+    face_landmarks objects are provided.
 
+    If landmarks come from YOLO or from NumPy, this method
+    will raise a clear error to prevent silent failures.
+    """
+
+    out = frame.copy()
+
+    for f in faces:
+        lm = f.get("landmarks", None)
+
+        # No landmarks at all,  NOT MediaPipe
+        if lm is None:
+            raise ValueError(
+                "CartoonAnonymiser: No landmarks provided. "
+                "This anonymiser works ONLY with MediaPipe FaceMesh detector."
+            )
+
+        # Case 1: Correct MediaPipe face_landmarks object
+        if hasattr(lm, "landmark"):
+            draw_face_landmarks_filled(out, lm)
+            continue
+
+        # Case 2: NumPy array (from mp_mesh_detector or YOLO) → ERROR
+        if isinstance(lm, np.ndarray):
+            raise TypeError(
+                "CartoonAnonymiser: Received NumPy landmark array. "
+                "Cartoon anonymisation requires MediaPipe face_landmarks objects. "
+                "Use MediaPipeMeshDetector() instead of YOLOFaceDetector() "
+                "for cartoon anonymisation."
+            )
+
+        # Unknown format → ERROR
+        raise TypeError(
+            f"CartoonAnonymiser: Unsupported landmark format: {type(lm)}. "
+            "This anonymiser only accepts MediaPipe face_landmarks objects."
+        )
+
+    return out
 
 # ---------- Draw helpers ----------
 def draw_face_landmarks(image_bgr, face_landmarks):
