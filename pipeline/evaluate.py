@@ -56,4 +56,19 @@ def evaluate_celeba(detector, celebA_root, limit=None):
     recall = metric.finalise()
     print(f"Detection Recall on CelebA: {recall:.3f}")
 
+    if save:
+        out = {
+            "detector": detector.__class__.__name__,
+            "dataset": "CelebA",
+            "images_evaluated": len(images),
+            "recall": recall,
+            "timestamp": time.time()
+        }
+
+        os.makedirs("results", exist_ok=True)
+        fname = f"results/celeba_detection_{int(time.time())}.json"
+        with open(fname, "w") as f:
+            json.dump(out, f, indent=4)
+        print(f"[saved] results → {fname}")
+
     return recall
