@@ -10,6 +10,7 @@ class MediaPipeMeshDetector(BaseDetector):
             static_image_mode=False
         )
 
+
     def detect(self, frame):
         import cv2
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -20,17 +21,19 @@ class MediaPipeMeshDetector(BaseDetector):
 
         if res.multi_face_landmarks:
             for fl in res.multi_face_landmarks:
-                pts = np.array([
-                    (lm.x * w, lm.y * h) for lm in fl.landmark
-                ], dtype=np.float32)
 
-                x1, y1 = pts[:,0].min(), pts[:,1].min()
-                x2, y2 = pts[:,0].max(), pts[:,1].max()
+                # Compute bounding box from MediaPipe landmark coordinates
+                xs = [lm.x * w for lm in fl.landmark]
+                ys = [lm.y * h for lm in fl.landmark]
+
+                x1, y1 = int(min(xs)), int(min(ys))
+                x2, y2 = int(max(xs)), int(max(ys))
 
                 faces.append({
-                    "bbox": [int(x1), int(y1), int(x2), int(y2)],
-                    "landmarks": pts
+                    "bbox": [x1, y1, x2, y2],
+                    "landmarks": fl      # IMPORTANT: return real MediaPipe object
                 })
 
         return faces
+
 

@@ -1,5 +1,32 @@
 import cv2
+import numpy as np
 from .base_anon import BaseAnonymiser
+import mediapipe as mp
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+mp_face_mesh = mp.solutions.face_mesh
+
+def indices_from_connections(connections):
+    """Return sorted unique landmark indices from a set of connections."""
+    idx = set()
+    for a, b in connections:
+        idx.add(a); idx.add(b)
+    return sorted(idx)
+
+
+# ---------- Feature sets from MediaPipe Face Mesh ----------
+FEATURE_CONNECTIONS = {
+    "lips": mp_face_mesh.FACEMESH_LIPS,
+    "left_eye": mp_face_mesh.FACEMESH_LEFT_EYE,
+    "right_eye": mp_face_mesh.FACEMESH_RIGHT_EYE,
+    "left_eyebrow": mp_face_mesh.FACEMESH_LEFT_EYEBROW,
+    "right_eyebrow": mp_face_mesh.FACEMESH_RIGHT_EYEBROW,
+    "face_oval": mp_face_mesh.FACEMESH_FACE_OVAL,
+}
+# irises are available in newer versions
+FEATURE_CONNECTIONS["irises"] = getattr(mp_face_mesh, "FACEMESH_IRISES", set())
+
+FEATURE_INDICES = {k: indices_from_connections(v) for k, v in FEATURE_CONNECTIONS.items()}
 
 class CartoonAnonymiser(BaseAnonymiser):
     def apply(self, frame, faces):

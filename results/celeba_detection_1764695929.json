@@ -1,7 +1,0 @@
-{
-    "detector": "YOLOFaceDetector",
-    "dataset": "CelebA",
-    "images_evaluated": 5000,
-    "recall": 0.9136,
-    "timestamp": 1764695929.8811393
-}

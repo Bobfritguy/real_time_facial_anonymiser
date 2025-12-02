@@ -35,6 +35,7 @@ def evaluate_celeba(detector, celebA_root, limit=None, anonymiser=None, save=Tru
         images = images[:limit]
 
     for img_name in images:
+        print("Processing", img_name)
         path = os.path.join(img_dir, img_name)
         frame = cv2.imread(path)
         if frame is None:
