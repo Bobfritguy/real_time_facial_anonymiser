@@ -1,7 +1,4 @@
-import os
-import cv2
-import time
-import json
+import os, cv2, time, json
 from detectors.yolo_detector import YOLOFaceDetector
 from metrics.detection import DetectionRecallMetric
 from datasets.celebA_loader import load_celeba_bboxes
@@ -26,11 +23,9 @@ def evaluate_video(detector, anonymiser, metrics, video_path):
     return metrics.finalise()
 
 
-def evaluate_celeba(detector, celebA_root, limit=None, save=False):
-    # Load GT annotations
-    bbox_dict = load_celeba_bboxes(celebA_root)
 
-    # Folder with images:
+def evaluate_celeba(detector, celebA_root, limit=None, anonymiser=None, save=True):
+    bbox_dict = load_celeba_bboxes(celebA_root)
     img_dir = os.path.join(celebA_root, "Img/img_celeba")
 
     metric = DetectionRecallMetric()
@@ -45,32 +40,47 @@ def evaluate_celeba(detector, celebA_root, limit=None, save=False):
         if frame is None:
             continue
 
-        gt = [bbox_dict[img_name]]  # CelebA always single face
+        # 1. Ground truth
+        gt = [bbox_dict[img_name]]
 
-        # Run the detector
-        faces = detector.detect(frame)
+        # 2. If anonymiser is None → evaluate clear image
+        if anonymiser is None:
+            eval_frame = frame
+        else:
+            # we need detections first to know what to anonymise
+            faces_clear = detector.detect(frame)
+            eval_frame = anonymiser.apply(frame, faces_clear)
 
-        pred_boxes = [f["bbox"] for f in faces]
+        # 3. Detect on either clear or anonymised frame
+        faces_pred = detector.detect(eval_frame)
 
-        # Update metric
+        pred_boxes = [f["bbox"] for f in faces_pred]
+
+        # 4. Update recall metric
         metric.update(gt, pred_boxes)
 
+    # Final result
     recall = metric.finalise()
-    print(f"Detection Recall on CelebA: {recall:.3f}")
+    print(f"Detection Recall: {recall:.4f}")
 
+    # Save JSON summary
     if save:
+        os.makedirs("results", exist_ok=True)
+
         out = {
             "detector": detector.__class__.__name__,
+            "anonymiser": anonymiser.__class__.__name__ if anonymiser else "None",
             "dataset": "CelebA",
             "images_evaluated": len(images),
             "recall": recall,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
-        os.makedirs("results", exist_ok=True)
-        fname = f"results/celeba_detection_{int(time.time())}.json"
+        fname = f"results/celeba_recall_{out['detector']}_{out['anonymiser']}.json"
         with open(fname, "w") as f:
             json.dump(out, f, indent=4)
-        print(f"[saved] results → {fname}")
+
+        print(f"[saved] {fname}")
 
     return recall
+
