@@ -8,28 +8,36 @@
 Measures how well a face detector on anonymised frames preserves the ability to detect the original faces.  
 This metric compares ground-truth face bounding boxes (from the clear/original frames) with predicted boxes (from anonymised frames).
 
+
 ### Definition
 
-For each ground-truth face box \( g \) and each predicted box \( p \), compute:
+For each ground-truth face box `g` and each predicted box `p`, compute the Intersection over Union (IoU):
 
-\[
-IoU(g, p) = \frac{\text{Area}(g \cap p)}{\text{Area}(g \cup p)}
-\]
+```
+IoU(g, p) = Area(g ∩ p) / Area(g ∪ p)
+```
+
 
 A predicted face is considered a match if:
 
-\[
-IoU(g, p) \ge \text{iou\_thresh}
-\]
+```
+IoU(g, p) ≥ iou_thresh
+```
+
 
 (Default: **0.5**, following common detection benchmarks.)
 
 The recall over a dataset is:
 
-\[
-Recall = \frac{\#\text{matched ground-truth faces}}{\#\text{total ground-truth faces}}
-\]
+```
 
+(Default: **0.5**, following common detection benchmarks.)
+
+The recall over a dataset is:i
+
+```
+Recall = matched_ground_truth_faces / total_ground_truth_faces
+```
 ### What It Captures
 
 - Whether faces remain **detectable** after anonymisation.  
