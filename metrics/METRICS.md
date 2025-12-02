@@ -29,8 +29,6 @@ IoU(g, p) ≥ iou_thresh
 
 The recall over a dataset is:
 
-```
-
 (Default: **0.5**, following common detection benchmarks.)
 
 The recall over a dataset is:i
