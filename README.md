@@ -67,3 +67,5 @@ live_face_detector/
 └── README.md
 ```
 
+## Metrics
+See **[metrics readme](metrics/METRICS.md)** for detailed descriptions of all evaluation metrics.
