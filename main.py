@@ -5,16 +5,15 @@ from pipeline.evaluate import evaluate_celeba
 from detectors.mp_mesh_detector import MediaPipeMeshDetector
 
 if __name__ == "__main__":
-    detector = YOLOFaceDetector("weights/pretrained_model.pt")
+    yolo = YOLOFaceDetector("weights/pretrained_model.pt")
+    landmarker = MediaPipeMeshDetector(model_path="weights/face_landmarker.task")
     celebA_root = "datasets/celebA"
 
-    print("### CLEAR recall:")
-    evaluate_celeba(detector, celebA_root, limit=5000)
+    print("### CLEAR metrics:")
+    evaluate_celeba(yolo, celebA_root, limit=5000, anonymiser=None, landmarker=landmarker)
 
-    print("\n### BLUR recall:")
-    evaluate_celeba(detector, celebA_root, limit=5000, anonymiser=BlurAnonymiser())
+    print("\n### BLUR metrics:")
+    evaluate_celeba(yolo, celebA_root, limit=5000, anonymiser=BlurAnonymiser(), landmarker=landmarker)
 
-    detector = MediaPipeMeshDetector()
-    print("\n### CARTOON recall:")
-    evaluate_celeba(detector, celebA_root, limit=5000, anonymiser=CartoonAnonymiser())
-
+    print("\n### CARTOON metrics:")
+    evaluate_celeba(yolo, celebA_root, limit=5000, anonymiser=CartoonAnonymiser(), landmarker=landmarker)

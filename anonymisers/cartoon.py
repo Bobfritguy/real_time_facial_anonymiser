@@ -1,152 +1,116 @@
-import cv2
 import numpy as np
-from .base_anon import BaseAnonymiser
-import mediapipe as mp
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_face_mesh = mp.solutions.face_mesh
-
-def indices_from_connections(connections):
-    """Return sorted unique landmark indices from a set of connections."""
-    idx = set()
-    for a, b in connections:
-        idx.add(a); idx.add(b)
-    return sorted(idx)
+import cv2
 
 
-# ---------- Feature sets from MediaPipe Face Mesh ----------
-FEATURE_CONNECTIONS = {
-    "lips": mp_face_mesh.FACEMESH_LIPS,
-    "left_eye": mp_face_mesh.FACEMESH_LEFT_EYE,
-    "right_eye": mp_face_mesh.FACEMESH_RIGHT_EYE,
-    "left_eyebrow": mp_face_mesh.FACEMESH_LEFT_EYEBROW,
-    "right_eyebrow": mp_face_mesh.FACEMESH_RIGHT_EYEBROW,
-    "face_oval": mp_face_mesh.FACEMESH_FACE_OVAL,
+# ---- Face landmark indices (MediaPipe FaceMesh topology) ----
+# These are "vertex indices" used to pick landmark points and draw convex hulls.
+# Works with Tasks FaceLandmarker outputs (typically 468 or 478 landmarks).
+FEATURE_INDICES = {
+    # Face oval (approx boundary)
+    "face_oval": [
+        10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
+        400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21,
+        54, 103, 67, 109
+    ],
+
+    # Lips (outer + inner; robust enough for a filled mouth region)
+    "lips": [
+        61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291,
+        185, 40, 39, 37, 0, 267, 269, 270, 409, 415,
+        78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308,
+        191, 80, 81, 82, 13, 312, 311, 310, 415, 308
+    ],
+
+    # Eyes (regions)
+    "left_eye": [
+        33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246
+    ],
+    "right_eye": [
+        263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466
+    ],
+
+    # Eyebrows
+    "left_eyebrow": [70, 63, 105, 66, 107, 55, 65, 52, 53, 46],
+    "right_eyebrow": [336, 296, 334, 293, 300, 285, 295, 282, 283, 276],
+
+    # Irises (only present in models that output 478 landmarks)
+    # Left iris indices 468..472, Right iris indices 473..477
+    "irises": [468, 469, 470, 471, 472, 473, 474, 475, 476, 477],
 }
-# irises are available in newer versions
-FEATURE_CONNECTIONS["irises"] = getattr(mp_face_mesh, "FACEMESH_IRISES", set())
 
-FEATURE_INDICES = {k: indices_from_connections(v) for k, v in FEATURE_CONNECTIONS.items()}
 
-class CartoonAnonymiser(BaseAnonymiser):
+def _safe_region_points(points: np.ndarray, idxs: list[int]) -> np.ndarray | None:
+    """Return points for valid indices only; None if insufficient points."""
+    n = len(points)
+    valid = [i for i in idxs if 0 <= i < n]
+    if len(valid) < 3:
+        return None
+    return points[valid]
+
+
+class CartoonAnonymiser:
+    """
+    Tasks-only cartoon anonymiser.
+    Expects faces entries to contain:
+      f["landmarks"] = list of NormalizedLandmark with .x/.y in [0,1]
+    """
+
     def apply(self, frame, faces):
-        """
-        Apply cartoon anonymisation ONLY when full MediaPipe
-        face_landmarks objects are provided.
-
-        If landmarks come from YOLO or from NumPy, this method
-        will raise a clear error to prevent silent failures.
-        """
-
         out = frame.copy()
+        h, w = out.shape[:2]
 
         for f in faces:
-            lm = f.get("landmarks", None)
+            lms = f.get("landmarks", None)
 
-            # No landmarks at all,  NOT MediaPipe
-            if lm is None:
+            # Enforce Tasks FaceLandmarker format
+            if lms is None:
                 raise ValueError(
-                    "CartoonAnonymiser: No landmarks provided. "
-                    "This anonymiser works ONLY with MediaPipe FaceMesh detector."
+                    "CartoonAnonymiser (Tasks): No landmarks provided. "
+                    "Use MediaPipe Tasks FaceLandmarker detector for cartoonisation."
                 )
-
-            # Case 1: Correct MediaPipe face_landmarks object
-            if hasattr(lm, "landmark"):
-                draw_face_landmarks_filled(out, lm)
-                continue
-
-            # Case 2: NumPy array (from mp_mesh_detector or YOLO) → ERROR
-            if isinstance(lm, np.ndarray):
+            if not isinstance(lms, (list, tuple)) or len(lms) == 0 or not hasattr(lms[0], "x"):
                 raise TypeError(
-                    "CartoonAnonymiser: Received NumPy landmark array. "
-                    "Cartoon anonymisation requires MediaPipe face_landmarks objects. "
-                    "Use MediaPipeMeshDetector() instead of YOLOFaceDetector() "
-                    "for cartoon anonymisation."
+                    "CartoonAnonymiser (Tasks): Unsupported landmarks format. "
+                    "Expected list of NormalizedLandmark with .x/.y fields."
                 )
 
-            # Unknown format → ERROR
-            raise TypeError(
-                f"CartoonAnonymiser: Unsupported landmark format: {type(lm)}. "
-                "This anonymiser only accepts MediaPipe face_landmarks objects."
-            )
+            # Convert normalized landmarks -> pixel points
+            points = np.array([[int(lm.x * w), int(lm.y * h)] for lm in lms], dtype=np.int32)
+
+            self._draw_cartoon_regions(out, points)
 
         return out
 
-# ---------- Draw helpers ----------
-def draw_face_landmarks(image_bgr, face_landmarks):
-    mp_drawing.draw_landmarks(
-        image=image_bgr,
-        landmark_list=face_landmarks,
-        connections=mp_face_mesh.FACEMESH_TESSELATION,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style(),
-    )
-    mp_drawing.draw_landmarks(
-        image=image_bgr,
-        landmark_list=face_landmarks,
-        connections=mp_face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_contours_style(),
-    )
-    if hasattr(mp_face_mesh, "FACEMESH_IRISES"):
-        mp_drawing.draw_landmarks(
-            image=image_bgr,
-            landmark_list=face_landmarks,
-            connections=mp_face_mesh.FACEMESH_IRISES,
-            landmark_drawing_spec=None,
-            connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_iris_connections_style(),
-        )
+    def _draw_cartoon_regions(self, image_bgr, points: np.ndarray):
+        # Region colors (BGR)
+        region_colors = {
+            "face_skin": (180, 180, 230),
+            "lips": (0, 0, 255),
+            "left_eye": (0, 255, 0),
+            "right_eye": (0, 255, 0),
+            "left_eyebrow": (255, 200, 0),
+            "right_eyebrow": (255, 200, 0),
+            "irises": (255, 255, 0),
+        }
 
+        # 1) Face skin: prefer face_oval hull; fallback to all points
+        oval_pts = _safe_region_points(points, FEATURE_INDICES["face_oval"])
+        base_pts = oval_pts if oval_pts is not None else points
 
-def draw_face_landmarks_filled(image_bgr, face_landmarks):
-    """
-    Draw opaque, solid-colored filled polygons for all main face regions:
-    full face skin, lips, eyes, eyebrows, irises.
-    """
-    h, w, _ = image_bgr.shape
-    points = np.array([[int(lm.x * w), int(lm.y * h)] for lm in face_landmarks.landmark], np.int32)
-
-    # Distinct colors (B, G, R)
-    region_colors = {
-        "face_skin": (180, 180, 230),     # light skin tone
-        "lips": (0, 0, 255),              # red
-        "left_eye": (0, 255, 0),          # green
-        "right_eye": (0, 255, 0),         # green
-        "left_eyebrow": (255, 200, 0),    # light blue/cyan
-        "right_eyebrow": (255, 200, 0),
-        "irises": (255, 255, 0),          # yellow
-    }
-
-    # Fill full face region using tessellation points
-    tess_points = np.array(
-        [[int(lm.x * w), int(lm.y * h)] for lm in face_landmarks.landmark], np.int32
-    )
-    if len(tess_points) > 3:
-        hull = cv2.convexHull(tess_points)
-        cv2.fillPoly(image_bgr, [hull], region_colors["face_skin"])
-        cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
-
-    # Draw individual feature regions (on top of face fill)
-    for region_name, idxs in FEATURE_INDICES.items():
-        if not idxs:
-            continue
-        region_pts = points[idxs]
-        if len(region_pts) < 3:
-            continue
-
-        hull = cv2.convexHull(region_pts)
-        color = region_colors.get(region_name, None)
-        if color is not None:
-            cv2.fillPoly(image_bgr, [hull], color)
+        if len(base_pts) >= 3:
+            hull = cv2.convexHull(base_pts)
+            cv2.fillPoly(image_bgr, [hull], region_colors["face_skin"])
             cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
 
+        # 2) Feature regions on top
+        for region_name in ["lips", "left_eye", "right_eye", "left_eyebrow", "right_eyebrow", "irises"]:
+            region_pts = _safe_region_points(points, FEATURE_INDICES[region_name])
+            if region_pts is None:
+                continue
 
-def collect_feature_points(face_landmarks, w, h, feature_key):
-    idxs = FEATURE_INDICES.get(feature_key, [])
-    pts = []
-    for i in idxs:
-        lm = face_landmarks.landmark[i]
-        pts.append((lm.x * w, lm.y * h))
-    return pts
-
+            hull = cv2.convexHull(region_pts)
+            color = region_colors.get(region_name)
+            if color is not None:
+                cv2.fillPoly(image_bgr, [hull], color)
+                cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
 
