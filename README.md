@@ -28,7 +28,7 @@ The framework is modular:
 
 ---
 
-### WP3 — Core Project Implementation (Dec–Feb)
+### 🟩 WP3 — Core Project Implementation (Dec–Feb)
 - [ ] **T1:** Implement full pipeline (capture → detect → track → anonymise → output)
 - [ ] **T2:** Temporal consistency tests (mouth, gaze, pose stability)
 - [ ] **T3:** Real-time optimisation strategies (embedded constraints)
