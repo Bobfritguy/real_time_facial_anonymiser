@@ -81,6 +81,7 @@ class CartoonAnonymiser:
 
         return out
 
+
     def _draw_cartoon_regions(self, image_bgr, points: np.ndarray):
         # Region colors (BGR)
         region_colors = {
@@ -93,24 +94,67 @@ class CartoonAnonymiser:
             "irises": (255, 255, 0),
         }
 
-        # 1) Face skin: prefer face_oval hull; fallback to all points
+        # ---- helpers ----
+        def _fill_hull(idxs, fill_color, outline=True):
+            region_pts = _safe_region_points(points, idxs)
+            if region_pts is None:
+                return
+            hull = cv2.convexHull(region_pts)
+            cv2.fillPoly(image_bgr, [hull], fill_color)
+            if outline:
+                cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
+
+        def _fill_contour(idxs, fill_color, outline=True):
+            """
+            Fill using the landmark order as a closed contour (avoids convex hull bridging).
+            """
+            region_pts = _safe_region_points(points, idxs)
+            if region_pts is None:
+                return
+            contour = region_pts.reshape((-1, 1, 2)).astype(np.int32)
+            cv2.fillPoly(image_bgr, [contour], fill_color)
+            if outline:
+                cv2.polylines(image_bgr, [contour], isClosed=True, color=(0, 0, 0), thickness=1)
+
+        # 1) Face skin (convex hull is fine)
         oval_pts = _safe_region_points(points, FEATURE_INDICES["face_oval"])
         base_pts = oval_pts if oval_pts is not None else points
-
         if len(base_pts) >= 3:
             hull = cv2.convexHull(base_pts)
             cv2.fillPoly(image_bgr, [hull], region_colors["face_skin"])
             cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
 
-        # 2) Feature regions on top
-        for region_name in ["lips", "left_eye", "right_eye", "left_eyebrow", "right_eyebrow", "irises"]:
-            region_pts = _safe_region_points(points, FEATURE_INDICES[region_name])
-            if region_pts is None:
-                continue
+        # 2) Lips (hull is OK, but contour also works; keep hull for robustness)
+        _fill_hull(FEATURE_INDICES["lips"], region_colors["lips"], outline=True)
 
-            hull = cv2.convexHull(region_pts)
-            color = region_colors.get(region_name)
-            if color is not None:
-                cv2.fillPoly(image_bgr, [hull], color)
-                cv2.polylines(image_bgr, [hull], isClosed=True, color=(0, 0, 0), thickness=1)
+        # 3) Eyebrows (hull OK)
+        _fill_hull(FEATURE_INDICES["left_eyebrow"], region_colors["left_eyebrow"], outline=True)
+        _fill_hull(FEATURE_INDICES["right_eyebrow"], region_colors["right_eyebrow"], outline=True)
+
+        # 4) Eyes: use contour (NOT convex hull) to prevent the nose-bridge bar
+        _fill_contour(FEATURE_INDICES["left_eye"], region_colors["left_eye"], outline=True)
+        _fill_contour(FEATURE_INDICES["right_eye"], region_colors["right_eye"], outline=True)
+
+        # 5) Irises: draw as circles if present (looks cleaner than hull/contour)
+        iris_idxs = FEATURE_INDICES.get("irises", [])
+        if iris_idxs:
+            iris_pts = _safe_region_points(points, iris_idxs)
+            if iris_pts is not None and iris_pts.shape[0] >= 10:
+                # left iris (468..472) and right iris (473..477) for 478-landmark models
+                left = _safe_region_points(points, [468, 469, 470, 471, 472])
+                right = _safe_region_points(points, [473, 474, 475, 476, 477])
+
+                for side in (left, right):
+                    if side is None:
+                        continue
+                    cx = int(np.mean(side[:, 0]))
+                    cy = int(np.mean(side[:, 1]))
+                    # radius based on spread
+                    dists = np.linalg.norm(
+                        (side.astype(np.float32) - np.array([cx, cy], dtype=np.float32)),
+                        axis=1
+                    )
+                    r = int(max(2, np.mean(dists)))
+                    cv2.circle(image_bgr, (cx, cy), r, region_colors["irises"], -1)
+                    cv2.circle(image_bgr, (cx, cy), r, (0, 0, 0), 1)
 

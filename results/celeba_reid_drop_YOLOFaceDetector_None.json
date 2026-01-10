@@ -1,0 +1,37 @@
+{
+  "detector": "YOLOFaceDetector",
+  "anonymiser": "None",
+  "dataset": "CelebA",
+  "reid_method": "pairwise_similarity_drop",
+  "identities_requested": 500,
+  "identities_evaluated": 499,
+  "identities_skipped": 1,
+  "sim_clear_clear": {
+    "n": 499,
+    "mean": 0.5834582999429361,
+    "p50": 0.6211280822753906,
+    "p90": 0.7736058235168457,
+    "p95": 0.8119076490402222,
+    "min": -0.054971154779195786,
+    "max": 0.9716953039169312
+  },
+  "sim_clear_anon": {
+    "n": 499,
+    "mean": 0.5834582999429361,
+    "p50": 0.6211280822753906,
+    "p90": 0.7736058235168457,
+    "p95": 0.8119076490402222,
+    "min": -0.054971154779195786,
+    "max": 0.9716953039169312
+  },
+  "drop_clearclear_minus_clearanon": {
+    "n": 499,
+    "mean": 0.0,
+    "p50": 0.0,
+    "p90": 0.0,
+    "p95": 0.0,
+    "min": 0.0,
+    "max": 0.0
+  },
+  "timestamp": 1768065299.4224591
+}

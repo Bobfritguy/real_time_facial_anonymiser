@@ -23,8 +23,8 @@ The framework is modular:
 
 ### 🟨 WP2 — Feasibility Testing / Proof-of-Concept (Nov–Dec)
 - [x] **T1:** Integrate baseline obfuscation (blur/pixelate) into detector  
-- [ ] **T2:** Baseline performance benchmarking (FPS, latency, load, re-ID)
-- [ ] **T3:** Prototype advanced anonymisation approaches (workstation PoC)
+- [x] **T2:** Baseline performance benchmarking (FPS, latency, detection, re-ID)
+- [x] **T3:** Prototype advanced anonymisation approaches (workstation PoC)
 
 ---
 

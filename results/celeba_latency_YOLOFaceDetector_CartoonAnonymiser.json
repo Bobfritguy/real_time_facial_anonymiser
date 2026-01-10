@@ -1,0 +1,32 @@
+{
+  "detector": "YOLOFaceDetector",
+  "anonymiser": "CartoonAnonymiser",
+  "dataset": "CelebA",
+  "images_requested": 500,
+  "images_evaluated": 500,
+  "latency_detect": {
+    "n": 500,
+    "mean_ms": 28.74055236598724,
+    "p50_ms": 27.803457999652892,
+    "p90_ms": 34.0685939998366,
+    "p95_ms": 36.19309275154591,
+    "max_ms": 50.56167500151787
+  },
+  "latency_anonymise": {
+    "n": 500,
+    "mean_ms": 13.38759880204816,
+    "p50_ms": 13.211752499955765,
+    "p90_ms": 13.936004000424873,
+    "p95_ms": 15.27459809949505,
+    "max_ms": 33.84116599954723
+  },
+  "latency_total_process": {
+    "n": 500,
+    "mean_ms": 42.1281511680354,
+    "p50_ms": 41.16330350007047,
+    "p90_ms": 48.35766989926924,
+    "p95_ms": 50.72742505035421,
+    "max_ms": 63.894309001625516
+  },
+  "timestamp": 1767804041.768734
+}
